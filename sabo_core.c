@@ -90,7 +90,6 @@ static int sabo_hack_syscall(int syscall_num, const sabo_ctx_t *ctx);
 static unsigned int sabo_get_process_runtime(const struct rusage *runinfo);
 static unsigned int sabo_get_process_runmem(const struct rusage *runinfo, int use_sandbox, pid_t child);
 static unsigned int sabo_get_proc_status(const char *item, pid_t pid);
-static void sabo_cleanup();
 
 
 static void
@@ -115,13 +114,6 @@ sabo_core_init()
         call_num = sabo_syscall_whitelist[i];
         sabo_syscall[call_num] = SABO_ALLOWED;
     }
-}
-
-
-static void
-sabo_cleanup()
-{
-    sg_data.last_use_mem = 0;
 }
 
 
@@ -617,32 +609,6 @@ sabo_check(sabo_ctx_t *ctx)
 }
 
 
-static void
-sabo_compare(sabo_ctx_t *ctx, sabo_res_t *res)
-{
-    struct stat data_out, user_out;
-    int rv;
-
-    rv = fstat(ctx->data_out_fd, &data_out);
-    if (rv != 0) {
-        sscanf(sg_data.err, "bad data.out fd: %s\n", strerror(errno));
-        return;
-    }
-
-    rv = fstat(ctx->user_out_fd, &user_out);
-    if (rv != 0) {
-        sscanf(sg_data.err, "bad user.out fd: %s\n", strerror(errno));
-        return;
-    }
-
-    if (data_out.st_size == user_out.st_size) {
-
-    } else {
-
-    }
-}
-
-
 const char *
 sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 {
@@ -670,8 +636,6 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 
     if (child == 0) {
         sabo_child_run(ctx, FALSE);
-
-        sabo_cleanup();
         return strerror(errno);
 
     } else {
@@ -680,13 +644,8 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 
     if (ctx->spj_mode) {
         err = sabo_work_spj(ctx, info);
-        sabo_cleanup();
         return err;
-
-    } else {
     }
-
-    sabo_cleanup();
 
     return NULL;
 }
