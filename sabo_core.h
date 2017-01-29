@@ -20,27 +20,28 @@
 
 typedef struct {
 
-    const char       *code_bin_file;
-    const char       *executor;
+    const char *code_bin_file;
+    const char *executor;
     
-    const char       *spj_code_bin;
-    const char       *spj_executor;
-    int         spj_mode;
+    const char *spj_code_bin;
+    const char *spj_executor;
 
-    int         data_in_fd;
-    int         data_out_fd;
-    int         user_out_fd;
+    int spj_mode;
 
-    const char      **allow_so_file;
-    int         allow_so_file_n;
+    int data_in_fd;
+    int data_out_fd;
+    int user_out_fd;
 
-    int        *allow_sys_call;
-    int         allow_sys_call_n;
+    const char **allow_so_file;
+    int allow_so_file_n;
 
-    int         time_limits;
-    int         memory_limits;
+    int *allow_sys_call;
+    int allow_sys_call_n;
 
-    int         use_sandbox; /* FIXME, just for java now */
+    int time_limits;
+    int memory_limits;
+
+    int use_sandbox; /* FIXME, just for java now */
 
     const char *classpath; /* FIXME, for java class path */
 

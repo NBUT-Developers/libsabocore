@@ -5,7 +5,6 @@
 CC=gcc
 CD=cd
 CP=cp
-TESTAPI=api/lua/
 TESTLIB=$(TESTAPI)libsabocore.a
 CFLAGS=-O2 -Wall
 DY=-shared -fPIC
@@ -13,6 +12,7 @@ AR=ar
 target=libsabocore
 luaso=$(TESTAPI)luacore.so
 
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(PWD)/t
 
 
 default: so a

@@ -65,7 +65,7 @@ typedef struct {
 sabo_global_t sg_data;
 int sabo_syscall[SABO_BUFFER_SIZE];
 
-int sabo_syscall_whitelist[] = {0, 1, 2, 3, 5, 9, 10, 11, 12, 21, 59, 89, 158, 231};
+int sabo_syscall_whitelist[] = {0, 1, 2, 3, 4, 5, 9, 10, 11, 12, 21, 59, 89, 158, 231};
 
 sabo_sofile_t sabo_sofile_whitelist[] = {
 
@@ -125,6 +125,7 @@ sabo_core_init()
 static int
 sabo_check_accessfile(const char *filepath, const int size, int flags, const sabo_ctx_t *ctx)
 {
+
     int i, all, one, count, len;
     const char *file;
 
@@ -152,6 +153,10 @@ sabo_check_accessfile(const char *filepath, const int size, int flags, const sab
         len--;
     }
 
+    if (*file == '/') {
+        file++;
+    }
+
     for (i = 0; i < count; ++i) {
 
         if (!strncmp(file, sabo_sofile_whitelist[i].first, len)
@@ -169,20 +174,29 @@ sabo_check_accessfile(const char *filepath, const int size, int flags, const sab
 static int
 sabo_hack_syscall(int syscall_num, const sabo_ctx_t *ctx)
 {
-    int i;
+
+    int  i;
+    int  size;
+    int *p;
 
     if (ctx->allow_sys_call) {
-        for (i = 0; i < ctx->allow_sys_call_n; i++) {
+        
+        p = ctx->allow_sys_call;
+        size = ctx->allow_sys_call_n;
 
-            if (syscall_num == ctx->allow_sys_call[i]) {
-                return SABO_ALLOWED;
-            }
-        }
-
-        return SABO_FORBIDDEN;
+    } else {
+        p = sabo_syscall_whitelist;
+        size = sizeof(sabo_syscall_whitelist) / sizeof(int);
     }
 
-    return sabo_syscall_whitelist[syscall_num] ? SABO_ALLOWED : SABO_FORBIDDEN;
+    for (i = 0; i < size; i++) {
+        
+        if (p[i] == syscall_num) {
+            return SABO_ALLOWED;
+        }
+    }
+
+    return SABO_FORBIDDEN;
 }
 
 
@@ -365,6 +379,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
             if (spj) {
                 judge_flag = WEXITSTATUS(runstat);
             }
+
             goto done;
 
         } else if (WIFSTOPPED(runstat)) {
@@ -382,20 +397,20 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 
                 judge_flag = SABO_RE_DBZ;
                 sabo_kill(child);
-                break;
+                goto done;
 
             case SIGSEGV:
 
                 judge_flag = SABO_RE;
                 sabo_kill(child);
-                break;
+                goto done;
 
             case SIGALRM:
 
                 /* Time Limit Exceed CPU TIME or USER TIME */
                 judge_flag = SABO_TLE;
                 sabo_kill(child);
-                break;
+                goto done;
 
             case SIGTRAP:
 
@@ -438,7 +453,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 
             /* Other case will be treated as MC */
             judge_flag = SABO_MC;
-            sabo_kill(child);
             goto done;
         }
     }
@@ -482,19 +496,20 @@ static void
 sabo_child_run(const sabo_ctx_t *ctx, int spj)
 {
 
-    /*Trace itself */
-    ptrace(PTRACE_TRACEME, 0, NULL, NULL);
+    int rv;
 
+    rv = dup2(ctx->data_in_fd, STDIN_FILENO);
+    rv = dup2(ctx->user_out_fd, STDOUT_FILENO);
     freopen("/dev/null", "a", stderr);
-
-    dup2(ctx->data_in_fd, STDIN_FILENO);
-    dup2(ctx->user_out_fd, STDOUT_FILENO);
 
     /*
      * set time limits and memory limits
      * but for spj src file, unnecessary
      * compare user.out with data.out
     */
+
+    /*Trace itself */
+    ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
     if (!spj) {
         sabo_set_limit(ctx);
@@ -506,6 +521,7 @@ sabo_child_run(const sabo_ctx_t *ctx, int spj)
     /* exec the user process */
     if (ctx->use_sandbox) {
         execl(ctx->executor, ctx->code_bin_file, NULL);
+
     } else {
 
         /*Execute the java program with the jvm security policy */
@@ -561,7 +577,7 @@ sabo_check(sabo_ctx_t *ctx)
         ctx->memory_limits = SABO_DEFMEM;
     }
 
-    if (ctx->use_sandbox) {
+    if (!ctx->use_sandbox) {
 
         if (ctx->classpath == NULL) {
             ctx->classpath = "./";
@@ -612,8 +628,8 @@ sabo_check(sabo_ctx_t *ctx)
 const char *
 sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 {
-    pid_t child;
     const char *err;
+    pid_t child;
 
     if (ctx == NULL) {
         return "args: ctx null";
@@ -629,7 +645,7 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 
     sabo_core_init();
 
-    sabo_check(ctx);
+    /* sabo_check(ctx); */
     if (sg_data.err[0] != '\0') {
         return sg_data.err;
     }
