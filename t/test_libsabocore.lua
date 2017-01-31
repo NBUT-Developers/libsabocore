@@ -19,11 +19,6 @@ typedef struct {
 
     const char *code_bin_file;
     const char *executor;
-    
-    const char *spj_code_bin;
-    const char *spj_executor;
-
-    int spj_mode;
 
     int data_in_fd;
     int data_out_fd;
@@ -101,10 +96,6 @@ local bundles = {
         code_file = "./test_rundone/Code.cpp",
         code_exec = nil,
 
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
-
         use_sandbox = true,
         classpath = nil,
 
@@ -130,10 +121,6 @@ local bundles = {
 
         code_file = "./test_mc/Code.cpp",
         code_exec = nil,
-
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
 
         use_sandbox = true,
         classpath = nil,
@@ -161,10 +148,6 @@ local bundles = {
         code_file = "./test_mc_2/Code.cpp",
         code_exec = nil,
 
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
-
         use_sandbox = true,
         classpath = nil,
 
@@ -190,10 +173,6 @@ local bundles = {
 
         code_file = "./test_mc_3/Code.cpp",
         code_exec = nil,
-
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
 
         use_sandbox = true,
         classpath = nil,
@@ -221,10 +200,6 @@ local bundles = {
         code_file = "./test_mc_4/Code.cpp",
         code_exec = nil,
 
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
-
         use_sandbox = true,
         classpath = nil,
 
@@ -250,10 +225,6 @@ local bundles = {
 
         code_file = "./test_tle/Code.cpp",
         code_exec = nil,
-
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
 
         use_sandbox = true,
         classpath = nil,
@@ -281,10 +252,6 @@ local bundles = {
         code_file = "./test_re_fpe/Code.cpp",
         code_exec = nil,
 
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
-
         use_sandbox = true,
         classpath = nil,
 
@@ -310,10 +277,6 @@ local bundles = {
 
         code_file = "./test_re_so/Code.cpp",
         code_exec = nil,
-
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
 
         use_sandbox = true,
         classpath = nil,
@@ -341,10 +304,6 @@ local bundles = {
         code_file = "./test_re/Code.cpp",
         code_exec = nil,
 
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
-
         use_sandbox = true,
         classpath = nil,
 
@@ -371,10 +330,6 @@ local bundles = {
         code_file = "./test_mle/Code.cpp",
         code_exec = nil,
 
-        spj_mode = false,
-        spj_code = nil,
-        spj_exec = nil,
-
         use_sandbox = true,
         classpath = nil,
 
@@ -387,11 +342,71 @@ local bundles = {
         min_memory_used = 65536,
         max_memory_used = 65536 * 10,
     },
+    {
+        name = "test_java_rundone",
+        path = getenv("PWD") .. "/test_java_rundone/",
 
+        data_in = "data.in",
+        data_out = "data.out",
+        user_out = "user.out",
+
+        time_limts = 1000,
+        memory_limits = 65536,
+
+        code_file = "./test_java_rundone/Main.java",
+        code_exec = nil,
+
+        use_sandbox = false,
+        classpath = getenv("PWD") .. "/test_java_rundone/",
+
+        compile = "javac ",
+
+        err = "cdata<const char *>: NULL",
+        judge_flag = 0,
+        min_time_used = 0,
+        max_time_used = 1000,
+        min_memory_used = 0,
+        max_memory_used = 65536,
+
+        run = true,
+    },
+    {
+        name = "test_java_tle",
+        path = getenv("PWD") .. "/test_java_tle/",
+
+        data_in = "data.in",
+        data_out = "data.out",
+        user_out = "user.out",
+
+        time_limts = 1000,
+        memory_limits = 65536,
+
+        code_file = "./test_java_tle/Main.java",
+        code_exec = nil,
+
+        use_sandbox = false,
+        classpath = getenv("PWD") .. "/test_java_tle/",
+
+        compile = "javac ",
+
+        err = "cdata<const char *>: NULL",
+        judge_flag = 2,
+        min_time_used = 1000,
+        max_time_used = 1000,
+        min_memory_used = 0,
+        max_memory_used = 65536,
+
+        run = true,
+    },
 }
 
 
 local function test(bundle)
+
+    if not bundle.run then
+        return
+    end
+
 
     local in_fd         = getfd(open(bundle.path .. bundle.data_in, "r"))
     local out_fd        = getfd(open(bundle.path .. bundle.data_out, "r"))
@@ -399,22 +414,14 @@ local function test(bundle)
     local time_limits   = bundle.time_limts
     local memory_limits = bundle.memory_limits
     local use_sandbox   = bundle.use_sandbox and 1 or 0
-    local spj_mode      = bundle.spj_mode and 1 or 0
     local code_file     = bundle.code_file
     local code_exec     = bundle.code_exec
-    local spj_code      = bundle.spj_code
-    local spj_exec      = bundle.spj_exec
     local classpath     = bundle.classpath
     local rv            = compile(bundle.compile .. code_file)
 
     local tab = {
         code_bin_file    = "Main",
         executor         = bundle.path .. "Main",
-
-        spj_code_bin     = spj_code,
-        spj_executor     = spj_exec,
-
-        spj_mode         = spj_mode,
 
         data_in_fd       = in_fd,
         data_out_fd      = out_fd,
@@ -432,6 +439,9 @@ local function test(bundle)
         use_sandbox      = use_sandbox,
         classpath        = classpath
     }
+    if tab.use_sandbox == 0 then
+        tab.executor = "/usr/local/jdk/bin/java"
+    end
 
     local info = {
         judge_flag  = -1, 
@@ -444,6 +454,7 @@ local function test(bundle)
     info = ffi.new("sabo_res_t", info)
 
     local err = sabo_core.sabo_core_run(ctx, info)
+    
 
     clean(bundle.path)
     assert(tostring(err) == bundle.err)

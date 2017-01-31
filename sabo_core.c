@@ -79,9 +79,8 @@ sabo_sofile_t sabo_sofile_whitelist[] = {
 
 static void sabo_core_init();
 static void sabo_set_limit(const sabo_ctx_t *ctx);
-static void sabo_child_run(const sabo_ctx_t *ctx, int in_spj_run);
-static void sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *resinfo, int spj);
-static const char *sabo_work_spj(const sabo_ctx_t *ctx, sabo_res_t *res);
+static void sabo_child_run(const sabo_ctx_t *ctx);
+static void sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *resinfo);
 static void sabo_check(sabo_ctx_t *ctx);
 static void sabo_kill(pid_t child);
 static int sabo_check_accessfile(const char *filepath, const int size, int flags, const sabo_ctx_t *ctx);
@@ -327,7 +326,7 @@ sabo_kill(pid_t child)
 
 
 static void
-sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
+sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 {
     int                     runstat, use_sandbox;
     int                     time_used, memory_used;
@@ -357,7 +356,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 
         time_used = sabo_get_process_runtime(&runinfo);
 
-        if (!spj && time_used > ctx->time_limits) {
+        if (time_used > ctx->time_limits) {
 
             sabo_kill(child);
             judge_flag = SABO_TLE;
@@ -365,7 +364,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
             goto done;
         }
 
-        if (!spj && memory_used > ctx->memory_limits) {
+        if (memory_used > ctx->memory_limits) {
 
             sabo_kill(child);
             judge_flag = SABO_MLE;
@@ -376,19 +375,10 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
         if (WIFEXITED(runstat)) { /* if the child process exit */
 
             judge_flag = SABO_DONE; /* Note: this AC just stand that the user program is run successfully */
-            if (spj) {
-                judge_flag = WEXITSTATUS(runstat);
-            }
 
             goto done;
 
         } else if (WIFSTOPPED(runstat)) {
-
-            if (spj) {
-                /* not limit the spj, supporter need to confirm it */
-                ptrace(PTRACE_SYSCALL, child, NULL, NULL);
-                continue;
-            }
 
             signal = WSTOPSIG(runstat);
             switch (signal) {
@@ -447,12 +437,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 
         } else {
 
-            if (spj) {
-                /* not limit the spj, supporter need to confirm it */
-                ptrace(PTRACE_SYSCALL, child, NULL, NULL);
-                continue;
-            }
-
             /* Other case will be treated as MC */
             judge_flag = SABO_MC;
             goto done;
@@ -462,11 +446,8 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 done:
 
     res->judge_flag = judge_flag;
-
-    if (!spj) {
-        res->time_used = time_used;
-        res->memory_used = memory_used;
-    }
+    res->time_used = time_used;
+    res->memory_used = memory_used;
 }
 
 
@@ -495,7 +476,7 @@ sabo_set_limit(const sabo_ctx_t *ctx)
 
 
 static void
-sabo_child_run(const sabo_ctx_t *ctx, int spj)
+sabo_child_run(const sabo_ctx_t *ctx)
 {
 
     int rv;
@@ -513,12 +494,7 @@ sabo_child_run(const sabo_ctx_t *ctx, int spj)
     /*Trace itself */
     ptrace(PTRACE_TRACEME, 0, NULL, NULL);
 
-    if (!spj) {
-        sabo_set_limit(ctx);
-
-    } else {
-        execl(ctx->spj_executor, ctx->spj_code_bin, ctx->data_out_fd, ctx->user_out_fd, NULL);
-    }
+    sabo_set_limit(ctx);
 
     /* exec the user process */
     if (ctx->use_sandbox) {
@@ -532,44 +508,9 @@ sabo_child_run(const sabo_ctx_t *ctx, int spj)
 }
 
 
-static const char *
-sabo_work_spj(const sabo_ctx_t *ctx, sabo_res_t *res)
-{
-    pid_t child;
-
-    if ((child = fork()) < 0) {
-        return strerror(errno);
-    }
-
-    if (child == 0) {
-        sabo_child_run(ctx, TRUE);
-        return strerror(errno);
-
-    } else {
-        sabo_monitor_run(child, ctx, res, TRUE);
-        return NULL;
-    }
-}
-
-
 static void
 sabo_check(sabo_ctx_t *ctx)
 {
-
-    if (!GOOD_FD(ctx->data_in_fd)) {
-        sscanf(sg_data.err, "data.in: %s\n", strerror(errno));
-        return;
-    }
-
-    if (!GOOD_FD(ctx->data_out_fd)) {
-        sscanf(sg_data.err, "data.out: %s\n", strerror(errno));
-        return;
-    }
-
-    if (!GOOD_FD(ctx->user_out_fd)) {
-        sscanf(sg_data.err, "user.out: %s\n", strerror(errno));
-        return;
-    }
 
     if (ctx->time_limits < 0) {
         ctx->time_limits = SABO_DEFTIME;
@@ -579,58 +520,12 @@ sabo_check(sabo_ctx_t *ctx)
         ctx->memory_limits = SABO_DEFMEM;
     }
 
-    if (!ctx->use_sandbox) {
-
-        if (ctx->classpath == NULL) {
-            ctx->classpath = "./";
-        }
-
-        if (!GOOD_FILE(ctx->classpath, R_OK)) {
-            sscanf(sg_data.err, "classpath: %s\n", strerror(errno));
-            return;
-        }
-
-        if (ctx->executor == NULL) {
-            ctx->executor = getenv("java");
-        }
-
-        if (!GOOD_FILE(ctx->executor, R_OK | X_OK)) {
-            sscanf(sg_data.err, "executor: %s\n", strerror(errno));
-            return;
-        }
-
-        if (!GOOD_FILE(ctx->code_bin_file, R_OK)) {
-            sscanf(sg_data.err, "code_bin_file: %s\n", strerror(errno));
-            return;
-        }
-
-    } else {
-
-        if (!GOOD_FILE(ctx->code_bin_file, R_OK | X_OK)) {
-            sscanf(sg_data.err, "code_bin_file: %s\n", strerror(errno));
-            return;
-        }
-    }
-
-    if (ctx->spj_mode) {
-
-        if (!GOOD_FILE(ctx->spj_code_bin, R_OK)) {
-            sscanf(sg_data.err, "spj code_bin_file: %s\n", strerror(errno));
-            return;
-        }
-
-        if (!GOOD_FILE(ctx->spj_executor, R_OK | X_OK)) {
-            sscanf(sg_data.err, "spj executor: %s\n", strerror(errno));
-            return;
-        }
-    }
 }
 
 
 const char *
 sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 {
-    const char *err;
     pid_t child;
 
     if (ctx == NULL) {
@@ -647,22 +542,18 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 
     sabo_core_init();
 
-    /* sabo_check(ctx); */
+    sabo_check(ctx);
+
     if (sg_data.err[0] != '\0') {
         return sg_data.err;
     }
 
     if (child == 0) {
-        sabo_child_run(ctx, FALSE);
+        sabo_child_run(ctx);
         return strerror(errno);
 
     } else {
-        sabo_monitor_run(child, ctx, info, FALSE);
-    }
-
-    if (ctx->spj_mode) {
-        err = sabo_work_spj(ctx, info);
-        return err;
+        sabo_monitor_run(child, ctx, info);
     }
 
     return NULL;

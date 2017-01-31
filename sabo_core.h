@@ -19,10 +19,6 @@ typedef struct {
     const char *code_bin_file;
     const char *executor;
     
-    const char *spj_code_bin;
-    const char *spj_executor;
-
-    int spj_mode;
 
     int data_in_fd;
     int data_out_fd;
