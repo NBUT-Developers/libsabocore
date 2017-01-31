@@ -21,7 +21,6 @@ typedef struct {
     const char *executor;
 
     int data_in_fd;
-    int data_out_fd;
     int user_out_fd;
 
     const char **allow_so_file;
@@ -87,7 +86,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_rundone/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -113,7 +111,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_mc/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -139,7 +136,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_mc_2/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -165,7 +161,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_mc_3/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -191,7 +186,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_mc_4/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -217,7 +211,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_tle/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -243,7 +236,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_re_fpe/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -269,7 +261,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_re_so/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -295,7 +286,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_re/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -321,7 +311,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_mle/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -347,7 +336,6 @@ local bundles = {
         path = getenv("PWD") .. "/test_java_rundone/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -367,15 +355,12 @@ local bundles = {
         max_time_used = 1000,
         min_memory_used = 0,
         max_memory_used = 65536,
-
-        run = true,
     },
     {
         name = "test_java_tle",
         path = getenv("PWD") .. "/test_java_tle/",
 
         data_in = "data.in",
-        data_out = "data.out",
         user_out = "user.out",
 
         time_limts = 1000,
@@ -395,21 +380,40 @@ local bundles = {
         max_time_used = 1000,
         min_memory_used = 0,
         max_memory_used = 65536,
+    },
+    {
+        name = "test_exception",
+        path = getenv("PWD") .. "/test_rundone/",
 
-        run = true,
+        data_in = "data.in",
+        user_out = "user.out",
+
+        time_limts = 1000,
+        memory_limits = 65536,
+
+        code_file = "./test_rundone/Code.cpp",
+        code_exec = nil,
+
+        use_sandbox = true,
+        classpath = nil,
+
+        compile = "g++ -O2 -Wmaybe-uninitialized -o ./test_rundone/Main ",
+
+        err = "cdata<const char *>: NULL",
+        judge_flag = 8,
+        min_time_used = -1,
+        max_time_used = -1,
+        min_memory_used = -1,
+        max_memory_used = -1,
+
+        test_exception = true,
     },
 }
 
 
 local function test(bundle)
 
-    if not bundle.run then
-        return
-    end
-
-
     local in_fd         = getfd(open(bundle.path .. bundle.data_in, "r"))
-    local out_fd        = getfd(open(bundle.path .. bundle.data_out, "r"))
     local user_fd       = getfd(open(bundle.path .. bundle.user_out, "w"))
     local time_limits   = bundle.time_limts
     local memory_limits = bundle.memory_limits
@@ -419,12 +423,12 @@ local function test(bundle)
     local classpath     = bundle.classpath
     local rv            = compile(bundle.compile .. code_file)
 
+
     local tab = {
         code_bin_file    = "Main",
         executor         = bundle.path .. "Main",
 
         data_in_fd       = in_fd,
-        data_out_fd      = out_fd,
         user_out_fd      = user_fd,
 
         allow_so_file    = nil,
@@ -453,8 +457,46 @@ local function test(bundle)
 
     info = ffi.new("sabo_res_t", info)
 
+    if bundle.test_exception then
+        local err = sabo_core.sabo_core_run(nil, info)
+        err = ffi.string(err)
+        assert(tostring(err) == "args: ctx null")
+
+        err = sabo_core.sabo_core_run(ctx, nil)
+        err = ffi.string(err)
+        assert(tostring(err) == "args: info null")
+
+        tab.data_in_fd = -1
+        ctx = ffi.new("sabo_ctx_t", tab)
+
+        err = sabo_core.sabo_core_run(ctx, info)
+        err = ffi.string(err)
+
+        assert(tostring(err) == "data_in_fd: Bad file descriptor\n")
+
+        tab.data_in_fd = in_fd
+        tab.user_out_fd = -1
+        ctx = ffi.new("sabo_ctx_t", tab)
+
+        err = sabo_core.sabo_core_run(ctx, info)
+        err = ffi.string(err)
+        assert(tostring(err) == "user_out_fd: Bad file descriptor\n")
+
+        tab.user_out_fd = user_fd;
+        tab.executor = "/a/b/c/d/e"
+        ctx = ffi.new("sabo_ctx_t", tab)
+
+        err = sabo_core.sabo_core_run(ctx, info)
+        err = ffi.string(err)
+        assert(tostring(err) == "execl: No such file or directory(executor)\n")
+
+        print(bundle.name .. " ... " .. "PASSED", " judge flag " .. info.judge_flag .. " time_used " .. info.time_used .. " memory_used " .. info.memory_used)
+        clean(bundle.path)
+
+        return
+    end
+
     local err = sabo_core.sabo_core_run(ctx, info)
-    
 
     clean(bundle.path)
     assert(tostring(err) == bundle.err)

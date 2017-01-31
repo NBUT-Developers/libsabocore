@@ -21,7 +21,6 @@ typedef struct {
     
 
     int data_in_fd;
-    int data_out_fd;
     int user_out_fd;
 
     const char **allow_so_file;

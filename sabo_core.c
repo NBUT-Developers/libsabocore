@@ -343,6 +343,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 
         /* block the monitor process */
         wait4(child, &runstat, 0, &runinfo);
+
         memory_used = sabo_get_process_runmem(&runinfo, use_sandbox, child);
 
         if (memory_used == -1) {
@@ -482,7 +483,17 @@ sabo_child_run(const sabo_ctx_t *ctx)
     int rv;
 
     rv = dup2(ctx->data_in_fd, STDIN_FILENO);
+    if (rv < 0) {
+        sprintf(sg_data.err, "data_in_fd: %s\n", strerror(errno));
+        return;
+    }
+
     rv = dup2(ctx->user_out_fd, STDOUT_FILENO);
+    if (rv < 0) {
+        sprintf(sg_data.err, "user_out_fd: %s\n", strerror(errno));
+        return;
+    }
+
     freopen("/dev/null", "a", stderr);
 
     /*
@@ -498,12 +509,16 @@ sabo_child_run(const sabo_ctx_t *ctx)
 
     /* exec the user process */
     if (ctx->use_sandbox) {
-        execl(ctx->executor, ctx->code_bin_file, NULL);
+        rv = execl(ctx->executor, ctx->code_bin_file, NULL);
+        if (rv < 0) {
+            sprintf(sg_data.err, "execl: %s(executor)\n", strerror(errno));
+        }
 
     } else {
 
         /*Execute the java program with the jvm security policy */
-        execl(ctx->executor, "java", "-cp", ctx->classpath, "-Xss8M", "-Djava.security.manager", "-Djava.security.policy==policy", "-Djava.awt.headless=TRUE", ctx->code_bin_file, NULL);
+        rv = execl(ctx->executor, "java", "-cp", ctx->classpath, "-Xss8M", "-Djava.security.manager", "-Djava.security.policy==policy", "-Djava.awt.headless=TRUE", ctx->code_bin_file, NULL);
+        sprintf(sg_data.err, "execl for java: %s\n", strerror(errno));
     }
 }
 
@@ -527,6 +542,8 @@ const char *
 sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 {
     pid_t child;
+    int fd[2];
+    int rv, flags, n;
 
     if (ctx == NULL) {
         return "args: ctx null";
@@ -536,25 +553,54 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
         return "args: info null";
     }
 
+    rv = pipe(fd);
+    if (rv < 0) {
+        sprintf(sg_data.err, "create pipe failed %s\n", strerror(errno));
+        return sg_data.err;
+    }
+
+    sabo_core_init();
+    /* XXX without using the array this time */
+    ctx->allow_sys_call = NULL;
+    ctx->allow_so_file = NULL;
+
+    sabo_check(ctx);
+
     if ((child = fork()) < 0) {
         return strerror(errno);
     }
 
-    sabo_core_init();
+    if (child == 0) {
+        close(fd[0]);
 
-    sabo_check(ctx);
+        sabo_child_run(ctx);
+
+        write(fd[1], sg_data.err, strlen(sg_data.err));
+        exit(EXIT_FAILURE);
+
+    } else {
+        close(fd[1]);
+        usleep(100);
+        
+        flags = fcntl(fd[0], F_GETFL);
+        fcntl(fd[0], F_SETFL, flags | O_NONBLOCK);
+
+        n = read(fd[0], sg_data.err, sizeof(sg_data.err));
+        if (n == -1 && errno == EAGAIN) {
+            sg_data.err[0] = '\0';
+            sabo_monitor_run(child, ctx, info);
+        }
+    }
 
     if (sg_data.err[0] != '\0') {
+        info->time_used = -1;
+        info->memory_used = -1;
+        info->judge_flag = SABO_SYSERR;
+
         return sg_data.err;
     }
 
-    if (child == 0) {
-        sabo_child_run(ctx);
-        return strerror(errno);
-
-    } else {
-        sabo_monitor_run(child, ctx, info);
-    }
+    close(fd[0]);
 
     return NULL;
 }
