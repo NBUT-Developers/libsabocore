@@ -128,18 +128,6 @@ sabo_check_accessfile(const char *filepath, const int size, int flags, const sab
     int i, all, one, count, len;
     const char *file;
 
-    if (ctx->allow_so_file) {
-
-        for (i = 0; i < ctx->allow_so_file_n; i++) {
-
-            if (strncmp(filepath, ctx->allow_so_file[i], size) == 0) {
-                return SABO_ALLOWED;
-            }
-        }
-
-        return SABO_FORBIDDEN;
-    }
-
     all = sizeof(sabo_sofile_whitelist);
     one = sizeof(sabo_sofile_t);
     count = all / one;
@@ -178,15 +166,8 @@ sabo_hack_syscall(int syscall_num, const sabo_ctx_t *ctx)
     int  size;
     int *p;
 
-    if (ctx->allow_sys_call) {
-        
-        p = ctx->allow_sys_call;
-        size = ctx->allow_sys_call_n;
-
-    } else {
-        p = sabo_syscall_whitelist;
-        size = sizeof(sabo_syscall_whitelist) / sizeof(int);
-    }
+    p = sabo_syscall_whitelist;
+    size = sizeof(sabo_syscall_whitelist) / sizeof(int);
 
     for (i = 0; i < size; i++) {
         
@@ -560,9 +541,6 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
     }
 
     sabo_core_init();
-    /* XXX without using the array this time */
-    ctx->allow_sys_call = NULL;
-    ctx->allow_so_file = NULL;
 
     sabo_check(ctx);
 

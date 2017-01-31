@@ -24,6 +24,7 @@ a:
 
 clean:
 	rm -f *.so *.a *.o
+	rm -f t/*.so
 
 test:
 	$(CP) $(target).so t/

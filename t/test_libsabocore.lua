@@ -23,12 +23,6 @@ typedef struct {
     int data_in_fd;
     int user_out_fd;
 
-    const char **allow_so_file;
-    int allow_so_file_n;
-
-    int *allow_sys_call;
-    int allow_sys_call_n;
-
     int time_limits;
     int memory_limits;
 
@@ -430,12 +424,6 @@ local function test(bundle)
 
         data_in_fd       = in_fd,
         user_out_fd      = user_fd,
-
-        allow_so_file    = nil,
-        allow_so_file_n  = 0,
-
-        allow_sys_call   = nil,
-        allow_sys_call_n = 0,
 
         time_limits      = time_limits,
         memory_limits    = memory_limits,

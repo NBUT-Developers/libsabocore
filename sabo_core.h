@@ -23,12 +23,6 @@ typedef struct {
     int data_in_fd;
     int user_out_fd;
 
-    const char **allow_so_file;
-    int allow_so_file_n;
-
-    int *allow_sys_call;
-    int allow_sys_call_n;
-
     int time_limits;
     int memory_limits;
 
