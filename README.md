@@ -60,7 +60,8 @@ typedef struct {
 |item| meaning|
 |---|---|
 |`code_bin_file`| the file name of the code(compiled)|
-|`executor`| the code interpreter|
+|`executor`| the code interpreter(full name) for java, executor is the java
+binary path(/path/to/java), for C/C++, executor is the ELT file path(/path/to/a.out)|
 |`data_in_fd`| the file descriptor of data.in|
 |`user_out_fd`| the file descriptor of user.out|
 |`time_limits`| the time resource limit of your process|
