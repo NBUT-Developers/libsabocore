@@ -5,12 +5,10 @@
 CC=gcc
 CD=cd
 CP=cp
-TESTLIB=$(TESTAPI)libsabocore.a
 CFLAGS=-O2 -Wall
 DY=-shared -fPIC
 AR=ar
 target=libsabocore
-luaso=$(TESTAPI)luacore.so
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(PWD)/t
 
@@ -28,6 +26,5 @@ clean:
 	rm -f *.so *.a *.o
 
 test:
-	$(CP) libsabocore.a $(TESTAPI)
-	$(CD) $(TESTAPI) && make
-	$(CP) $(luaso) t/
+	$(CP) $(target).so t/
+	$(CD) t/ && luajit test_libsabocore.lua

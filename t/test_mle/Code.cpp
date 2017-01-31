@@ -2,11 +2,15 @@
 using namespace std;
 
 char val[4], hua[4];
+long long AELX[80080800];
 int temp[10];
 int main() {
     int t;
+    for (t = 0; t < 80080800; t++) {
+        AELX[t] = -1;
+    }
     scanf("%d", &t);
-    char c;
+    char c = 0;
     while (t--) {
         bool flag = 1;
         for (int i = 0; i < 5; ++i) {

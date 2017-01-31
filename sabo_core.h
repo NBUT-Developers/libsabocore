@@ -6,16 +6,12 @@
 #ifndef SABO_CORE_H
 #define SABO_CORE_H
 
-#define   SABO_AC        0
-#define   SABO_PE        1
+#define   SABO_DONE      0
 #define   SABO_TLE       2
 #define   SABO_MLE       3
-#define   SABO_WA        4
 #define   SABO_RE        5
 #define   SABO_RE_DBZ    6
-#define   SABO_RE_SO     7
 #define   SABO_SYSERR    8
-#define   SABO_OLE       9
 #define   SABO_MC        10
 
 typedef struct {

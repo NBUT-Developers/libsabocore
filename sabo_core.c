@@ -369,13 +369,13 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 
             sabo_kill(child);
             judge_flag = SABO_MLE;
-            memory_used = ctx->memory_limits;
+            memory_used = ctx->memory_limits > memory_used ? ctx->memory_limits : memory_used;
             goto done;
         }
 
         if (WIFEXITED(runstat)) { /* if the child process exit */
 
-            judge_flag = SABO_AC; /* Note: this AC just stand that the user program is run successfully */
+            judge_flag = SABO_DONE; /* Note: this AC just stand that the user program is run successfully */
             if (spj) {
                 judge_flag = WEXITSTATUS(runstat);
             }
@@ -409,6 +409,8 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res, int spj)
 
                 /* Time Limit Exceed CPU TIME or USER TIME */
                 judge_flag = SABO_TLE;
+
+                time_used = ctx->time_limits;
                 sabo_kill(child);
                 goto done;
 
