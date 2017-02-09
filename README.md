@@ -13,9 +13,104 @@ libsabocore
 > descent, the son of Outlook III, as well as via his parents the adopted brother of 
 > Stelly, the current king of the Goa Kingdom, whom Sabo has never recognized as such.
 
-Quick Start
-----------
+Synopsis
+--------
+### use in ANSI C
 
+```c
+#include "sabo_core.h"
+
+#include "sabo_core.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
+
+void
+judge()
+{
+    sabo_ctx_t ctx;
+    sabo_res_t res;
+    const char *err, *judge_flag;
+
+    ctx.user_out_fd = open("/path/to/user.out", O_WRONLY);
+    if (ctx.user_out_fd < 0) {
+        fprintf(stderr, "failed to open user.out: %s\n", strerror(errno));
+        return;
+    }
+
+    ctx.data_in_fd = open("/path/to/data.in", O_RDONLY);
+    if (ctx.data_in_fd < 0) {
+        fprintf(stderr, "failed to open user.out: %s\n", strerror(errno));
+        return;
+    }
+
+    ctx.executor = "/path/to/Main"; /* Main is an ELF format file which can be executed */
+    ctx.code_bin_file = "Main";
+
+    ctx.time_limits = 1000;
+    ctx.memory_limits = 65536;
+
+    ctx.use_sandbox = 1; /* use ptrace to monitor the user process */
+
+    ctx.classpath = NULL; /* only for java */
+
+    /*
+     * or for java
+     * ctx.executor = "/path/to/java/bin/java";
+     * ctx.code_bin_file = "Main";
+     * ctx.use_sandbox = 0
+     * ctx.classpath = "path/to/classfile/"
+     * note: you need not set use_sandbox to 1 because we use jvm's strategy
+     */
+
+    err = sabo_core_run(&ctx, &res);
+
+    if (err) {
+        fprintf(stderr, "failed to run user code: %s\n", err);
+        return;
+    }
+
+    switch (res.judge_flag) {
+
+    case SABO_DONE:
+        judge_flag = "done";
+        break;
+
+    case SABO_TLE:
+        judge_flag = "TLE";
+        break;
+
+    case SABO_MLE:
+        judge_flag = "MLE";
+        break;
+
+    case SABO_RE:
+        judge_flag = "RE";
+        break;
+
+    case SABO_RE_DBZ:
+        judge_flag = "RE(FPE)";
+        break;
+
+    case SABO_MC:
+        judge_flag = "MC";
+        break;
+
+    default:
+        judge_flag = "SYSERR";
+        break;
+    }
+
+    fprintf(stdout, "judge flag: %s time_used: %d, memory_used: %d\n",
+                    judge_flag, res.time_used, res.memory_used);
+}
+
+```
+
+### used as lib
 ```bash
 make
 ```
