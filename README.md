@@ -108,7 +108,7 @@ judge()
 
 ```
 
-You need to use the lib from compiling it with command `make` and  you will get `libsacore.a` and `libsabocore.so`.
+You need to compile the libsabocore code with `make` and you will get `libsacore.a` and `libsabocore.so`.
 <br>
 
 
