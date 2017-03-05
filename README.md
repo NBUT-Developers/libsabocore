@@ -5,7 +5,7 @@ libsabocore
 
 
 
-<img src="https://tokers-test.b0.upaiyun.com/sabo.png" />
+<img src="./trivial/sabo.png" />
 
 > Sabo is the Revolutionary Army's Chief of Staff, recognized as the "No. 2" of the > 
 > entire organization, ranking directly under Monkey D. Dragon himself.[2] Next to > 
@@ -15,7 +15,6 @@ libsabocore
 
 Synopsis
 --------
-### use in ANSI C
 
 ```c
 #include "sabo_core.h"
@@ -109,12 +108,7 @@ judge()
 
 ```
 
-### used as lib
-```bash
-make
-```
-
-You will get `libsacore.a` and `libsabocore.so`.
+You need to use the lib from compiling it with command `make` and  you will get `libsacore.a` and `libsabocore.so`.
 <br>
 
 
@@ -207,11 +201,6 @@ const char *sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info);
 
 An error string will be returned, error is NULL if there is no error.
 <br>
-
-Example
--------
-
-See the t/test_libsabocore for example code.
 
 API
 ---
