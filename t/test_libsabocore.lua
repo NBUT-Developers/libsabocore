@@ -329,6 +329,7 @@ local bundles = {
         max_memory_used = 65536 * 10,
     },
     {
+        skip            = true,
         name            = "test_java_rundone",
         path            = getenv("PWD") .. "/test_java_rundone/",
 
@@ -354,6 +355,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_java_tle",
         path            = getenv("PWD") .. "/test_java_tle/",
 
@@ -379,6 +381,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_exception",
         path            = getenv("PWD") .. "/test_rundone/",
 
