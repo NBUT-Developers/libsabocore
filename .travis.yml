@@ -1,8 +1,10 @@
 language: lua
 
 before_script:
-    sudo apt-get update -q
-    sudo apt-get install luajit
+    - sudo apt-get update -q
+    - sudo apt-get install luajit
 
 script:
-    make test
+    - make
+    - make test
+    - make clean
