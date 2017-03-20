@@ -158,8 +158,8 @@ typedef struct {
 For the meaning of `language`, you can see these macros.
 
 ```c
-#define   SABO_C_CPP     0
-#define   SABO_JAVA      1
+#define   SABO_C_CPP     1
+#define   SABO_JAVA      0
 ```
 <br>
 

@@ -288,7 +288,7 @@ sabo_get_process_runmem(const struct rusage *runinfo, int language, pid_t child)
      * size of the process tree
      */
 
-    if (!language) {
+    if (language == SABO_JAVA) {
         /* for java */
         return runinfo->ru_minflt * (getpagesize() >> 10);
 
@@ -318,7 +318,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 
     time_used   = -1;
     judge_flag  = SABO_UNKNOWN;
-    language = ctx->language;
+    language    = ctx->language;
 
     for ( ;; ) {
 
@@ -388,7 +388,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 
             case SIGTRAP:
 
-                if (!language) {
+                if (language == SABO_JAVA) {
                     ptrace(PTRACE_SYSCALL, child, NULL, NULL);
                     continue;
                 }
@@ -407,7 +407,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
                 }
 
                 if (sabo_hack_syscall(syscall, ctx) == SABO_FORBIDDEN) {
-
                     judge_flag = SABO_MC;
                     sabo_kill(child);
                     goto done;
