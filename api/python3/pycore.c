@@ -21,7 +21,7 @@ py_run(PyObject *self, PyObject *args) {
     ctx.user_out_fd   = atoi(process_arg(PyDict_GetItemString(judge_config, "user_out_fd")));
     ctx.time_limits   = atoi(process_arg(PyDict_GetItemString(judge_config, "time_limits")));
     ctx.memory_limits = atoi(process_arg(PyDict_GetItemString(judge_config, "memory_limits")));
-    ctx.use_sandbox   = atoi(process_arg(PyDict_GetItemString(judge_config, "use_sandbox")));
+    ctx.language      = atoi(process_arg(PyDict_GetItemString(judge_config, "language")));
 
     sabo_res_t res;
 

@@ -26,7 +26,7 @@ typedef struct {
     int time_limits;
     int memory_limits;
 
-    int use_sandbox; /* FIXME, just for java now */
+    int language; /* FIXME, just for java now */
 
     const char *classpath; /* FIXME, for java class path */
 
@@ -88,7 +88,7 @@ local bundles = {
         code_file       = "./test_rundone/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_rundone/Main ",
@@ -113,7 +113,7 @@ local bundles = {
         code_file       = "./test_mc/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_mc/Main ",
@@ -138,7 +138,7 @@ local bundles = {
         code_file       = "./test_mc_2/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_mc_2/Main ",
@@ -163,7 +163,7 @@ local bundles = {
         code_file       = "./test_mc_3/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_mc_3/Main ",
@@ -188,7 +188,7 @@ local bundles = {
         code_file       = "./test_mc_4/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_mc_4/Main ",
@@ -213,7 +213,7 @@ local bundles = {
         code_file       = "./test_tle/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_tle/Main ",
@@ -239,7 +239,7 @@ local bundles = {
         code_file       = "./test_re_fpe/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_re_fpe/Main ",
@@ -265,7 +265,7 @@ local bundles = {
         code_file       = "./test_re_so/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_re_so/Main ",
@@ -291,7 +291,7 @@ local bundles = {
         code_file       = "./test_re/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_re/Main ",
@@ -316,7 +316,7 @@ local bundles = {
         code_file       = "./test_mle/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_mle/Main ",
@@ -342,7 +342,7 @@ local bundles = {
         code_file       = "./test_java_rundone/Main.java",
         code_exec       = nil,
 
-        use_sandbox     = false,
+        language        = false,
         classpath       = getenv("PWD") .. "/test_java_rundone/",
 
         compile         = "javac ",
@@ -368,7 +368,7 @@ local bundles = {
         code_file       = "./test_java_tle/Main.java",
         code_exec       = nil,
 
-        use_sandbox     = false,
+        language        = false,
         classpath       = getenv("PWD") .. "/test_java_tle/",
 
         compile         = "javac ",
@@ -394,7 +394,7 @@ local bundles = {
         code_file       = "./test_rundone/Code.cpp",
         code_exec       = nil,
 
-        use_sandbox     = true,
+        language        = true,
         classpath       = nil,
 
         compile         = "g++ -O2 -Wmaybe-uninitialized -o ./test_rundone/Main ",
@@ -422,7 +422,7 @@ local function test(bundle)
     local user_fd       = getfd(open(bundle.path .. bundle.user_out, "w"))
     local time_limits   = bundle.time_limts
     local memory_limits = bundle.memory_limits
-    local use_sandbox   = bundle.use_sandbox and 1 or 0
+    local language      = bundle.language and 1 or 0
     local code_file     = bundle.code_file
     local code_exec     = bundle.code_exec
     local classpath     = bundle.classpath
@@ -439,11 +439,11 @@ local function test(bundle)
         time_limits      = time_limits,
         memory_limits    = memory_limits,
 
-        use_sandbox      = use_sandbox,
+        language         = language,
         classpath        = classpath
     }
 
-    if tab.use_sandbox == 0 then
+    if tab.language == 0 then
         tab.executor = "/usr/local/jdk/bin/java"
     end
 

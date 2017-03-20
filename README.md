@@ -51,7 +51,7 @@ judge()
     ctx.time_limits = 1000;
     ctx.memory_limits = 65536;
 
-    ctx.use_sandbox = 1; /* use ptrace to monitor the user process */
+    ctx.language = SABO_C_CPP; /* use ptrace to monitor the user process */
 
     ctx.classpath = NULL; /* only for java */
 
@@ -59,9 +59,8 @@ judge()
      * or for java
      * ctx.executor = "/path/to/java/bin/java";
      * ctx.code_bin_file = "Main";
-     * ctx.use_sandbox = 0
+     * ctx.language = SABO_JAVA
      * ctx.classpath = "path/to/classfile/"
-     * note: you need not set use_sandbox to 1 because we use jvm's strategy
      */
 
     err = sabo_core_run(&ctx, &res);
@@ -138,7 +137,7 @@ typedef struct {
     int time_limits;
     int memory_limits;
 
-    int use_sandbox; /* FIXME, just for java now */
+    int language; /* FIXME, just for java now */
 
     const char *classpath; /* FIXME, for java class path */
 
@@ -153,8 +152,15 @@ typedef struct {
 |`user_out_fd`| the file descriptor of user.out|
 |`time_limits`| the time resource limit of your process|
 |`memory_limits`| the memory resource limit of your process|
-|`use_sandbox`| if use_sandbox is 1, then ptrace will be used to monitor your process, for java program, you can just set it to 0 because we use JVM's strategy|
+|`language`| Choose SABO_JAVA or SABO_C_CPP based on your program |
 |`classpath`| used for java, you need to set an appropriate path where you hope java will find class in there|
+<br>
+For the meaning of `language`, you can see these macros.
+
+```c
+#define   SABO_C_CPP     0
+#define   SABO_JAVA      1
+```
 <br>
 
 ```c

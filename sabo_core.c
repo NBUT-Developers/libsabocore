@@ -87,7 +87,7 @@ static int sabo_check_accessfile(const char *filepath, const int size, int flags
 static int sabo_hack_open_file(struct user_regs_struct *reg, pid_t child, const sabo_ctx_t *ctx);
 static int sabo_hack_syscall(int syscall_num, const sabo_ctx_t *ctx);
 static unsigned int sabo_get_process_runtime(const struct rusage *runinfo);
-static unsigned int sabo_get_process_runmem(const struct rusage *runinfo, int use_sandbox, pid_t child);
+static unsigned int sabo_get_process_runmem(const struct rusage *runinfo, int language, pid_t child);
 static unsigned int sabo_get_proc_status(const char *item, pid_t pid);
 
 
@@ -276,7 +276,7 @@ sabo_get_process_runtime(const struct rusage *runinfo)
 
 
 static unsigned int
-sabo_get_process_runmem(const struct rusage *runinfo, int use_sandbox, pid_t child)
+sabo_get_process_runmem(const struct rusage *runinfo, int language, pid_t child)
 {
     /*
      * Get the used memory
@@ -288,7 +288,7 @@ sabo_get_process_runmem(const struct rusage *runinfo, int use_sandbox, pid_t chi
      * size of the process tree
      */
 
-    if (!use_sandbox) {
+    if (!language) {
         /* for java */
         return runinfo->ru_minflt * (getpagesize() >> 10);
 
@@ -309,7 +309,7 @@ sabo_kill(pid_t child)
 static void
 sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 {
-    int                     runstat, use_sandbox;
+    int                     runstat, language;
     int                     time_used, memory_used;
     int                     judge_flag, signal;
     long long               syscall;
@@ -318,14 +318,14 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 
     time_used   = -1;
     judge_flag  = SABO_UNKNOWN;
-    use_sandbox = ctx->use_sandbox;
+    language = ctx->language;
 
     for ( ;; ) {
 
         /* block the monitor process */
         wait4(child, &runstat, 0, &runinfo);
 
-        memory_used = sabo_get_process_runmem(&runinfo, use_sandbox, child);
+        memory_used = sabo_get_process_runmem(&runinfo, language, child);
 
         if (memory_used == -1) {
 
@@ -388,7 +388,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 
             case SIGTRAP:
 
-                if (!use_sandbox) {
+                if (!language) {
                     ptrace(PTRACE_SYSCALL, child, NULL, NULL);
                     continue;
                 }
@@ -489,7 +489,7 @@ sabo_child_run(const sabo_ctx_t *ctx)
     sabo_set_limit(ctx);
 
     /* exec the user process */
-    if (ctx->use_sandbox) {
+    if (ctx->language == SABO_JAVA) {
         rv = execl(ctx->executor, ctx->code_bin_file, NULL);
         if (rv < 0) {
             sprintf(sg_data.err, "execl: %s(executor)\n", strerror(errno));

@@ -14,6 +14,9 @@
 #define   SABO_SYSERR    8
 #define   SABO_MC        10
 
+#define   SABO_C_CPP     1
+#define   SABO_JAVA      0
+
 typedef struct {
 
     const char *code_bin_file;
@@ -26,7 +29,7 @@ typedef struct {
     int time_limits;
     int memory_limits;
 
-    int use_sandbox; /* FIXME, just for java now */
+    int language; /* FIXME, just for java now */
 
     const char *classpath; /* FIXME, for java class path */
 
