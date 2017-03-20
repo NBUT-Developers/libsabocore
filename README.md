@@ -1,9 +1,9 @@
+[![Build Status](https://travis-ci.org/tokers/libsabocore.svg?branch=master)](https://travis-ci.org/tokers/libsabocore.svg?branch=master)
+
 libsabocore
 ===========
 
 ---------------------------------------
-
-
 
 <img src="./trivial/sabo.png" />
 

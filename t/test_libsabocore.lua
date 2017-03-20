@@ -226,6 +226,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_re_fpe",
         path            = getenv("PWD") .. "/test_re_fpe/",
 
@@ -251,6 +252,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_re_so",
         path            = getenv("PWD") .. "/test_re_so/",
 
@@ -276,6 +278,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_re",
         path            = getenv("PWD") .. "/test_re/",
 
@@ -326,6 +329,7 @@ local bundles = {
         max_memory_used = 65536 * 10,
     },
     {
+        skip            = true,
         name            = "test_java_rundone",
         path            = getenv("PWD") .. "/test_java_rundone/",
 
@@ -351,6 +355,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_java_tle",
         path            = getenv("PWD") .. "/test_java_tle/",
 
@@ -376,6 +381,7 @@ local bundles = {
         max_memory_used = 65536,
     },
     {
+        skip            = true,
         name            = "test_exception",
         path            = getenv("PWD") .. "/test_rundone/",
 
@@ -406,6 +412,11 @@ local bundles = {
 
 
 local function test(bundle)
+
+    if bundle.skip then
+        print(bundle.name, "...SKIPPED")
+        return
+    end
 
     local in_fd         = getfd(open(bundle.path .. bundle.data_in, "r"))
     local user_fd       = getfd(open(bundle.path .. bundle.user_out, "w"))
