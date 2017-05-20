@@ -32,7 +32,6 @@ typedef struct {
     const char *code_bin_file;
     const char *executor;
     
-
     int data_in_fd;
     int user_out_fd;
 
