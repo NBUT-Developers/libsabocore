@@ -59,7 +59,6 @@ typedef struct {
 
 typedef struct {
     int last_use_mem;
-    char err[NAME_MAX];
 } sabo_global_t;
 
 sabo_global_t sg_data;
@@ -79,8 +78,8 @@ sabo_sofile_t sabo_sofile_whitelist[] = {
 
 static void sabo_core_init();
 static void sabo_set_limit(const sabo_ctx_t *ctx);
-static void sabo_child_run(const sabo_ctx_t *ctx);
-static void sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *resinfo);
+static int sabo_child_run(const sabo_ctx_t *ctx);
+static int sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *resinfo);
 static void sabo_check(sabo_ctx_t *ctx);
 static void sabo_kill(pid_t child);
 static int sabo_check_accessfile(const char *filepath, const int size, int flags, const sabo_ctx_t *ctx);
@@ -104,7 +103,6 @@ sabo_core_init()
     count = all / one;
 
     sg_data.last_use_mem = 0;
-    sg_data.err[0] = '\0';
 
     memset(sabo_syscall, SABO_FORBIDDEN, sizeof(sabo_syscall));
 
@@ -306,17 +304,19 @@ sabo_kill(pid_t child)
 }
 
 
-static void
+static int
 sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
 {
     int                     runstat, language;
     int                     time_used, memory_used;
     int                     judge_flag, signal;
+    int                     rv;
     long long               syscall;
     struct rusage           runinfo;
     struct user_regs_struct reg;
 
-    time_used   = -1;
+    time_used   = 0;
+    rv          = 0;
     judge_flag  = SABO_UNKNOWN;
     language    = ctx->language;
 
@@ -328,7 +328,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
         memory_used = sabo_get_process_runmem(&runinfo, language, child);
 
         if (memory_used == -1) {
-
             judge_flag = SABO_SYSERR;
             time_used = 0;
             memory_used = 0;
@@ -339,7 +338,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
         time_used = sabo_get_process_runtime(&runinfo);
 
         if (time_used > ctx->time_limits) {
-
             sabo_kill(child);
             judge_flag = SABO_TLE;
             time_used = ctx->time_limits;
@@ -347,47 +345,43 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
         }
 
         if (memory_used > ctx->memory_limits) {
-
             sabo_kill(child);
             judge_flag = SABO_MLE;
             memory_used = ctx->memory_limits > memory_used ? ctx->memory_limits : memory_used;
             goto done;
         }
 
-        if (WIFEXITED(runstat)) { /* if the child process exit */
-
+        /* if the child process exit */
+        if (WIFEXITED(runstat)) {
+            /*
+             * Well, the child exit, maybe it never start run
+             * the user's program
+             */
+            rv = WEXITSTATUS(runstat);
             judge_flag = SABO_DONE; /* Note: this AC just stand that the user program is run successfully */
-
             goto done;
 
         } else if (WIFSTOPPED(runstat)) {
-
             signal = WSTOPSIG(runstat);
             switch (signal) {
-
             case SIGFPE:
-
                 judge_flag = SABO_RE_DBZ;
                 sabo_kill(child);
                 goto done;
 
             case SIGSEGV:
-
                 judge_flag = SABO_RE;
                 sabo_kill(child);
                 goto done;
 
             case SIGALRM:
-
                 /* Time Limit Exceed CPU TIME or USER TIME */
                 judge_flag = SABO_TLE;
-
                 time_used = ctx->time_limits;
                 sabo_kill(child);
                 goto done;
 
             case SIGTRAP:
-
                 if (language == SABO_JAVA) {
                     ptrace(PTRACE_SYSCALL, child, NULL, NULL);
                     continue;
@@ -397,7 +391,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
                 syscall = SYSCALL(&reg);
 
                 if (syscall == SYS_open) {
-
                     if (sabo_hack_open_file(&reg, child, ctx) == SABO_FORBIDDEN) {
                         /* use forbidden dynamic shared file */
                         judge_flag = SABO_MC;
@@ -417,7 +410,6 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
             }
 
         } else {
-
             /* Other case will be treated as MC */
             judge_flag = SABO_MC;
             goto done;
@@ -429,6 +421,8 @@ done:
     res->judge_flag = judge_flag;
     res->time_used = time_used;
     res->memory_used = memory_used;
+
+    return rv;
 }
 
 
@@ -456,7 +450,7 @@ sabo_set_limit(const sabo_ctx_t *ctx)
 }
 
 
-static void
+static int
 sabo_child_run(const sabo_ctx_t *ctx)
 {
 
@@ -464,16 +458,15 @@ sabo_child_run(const sabo_ctx_t *ctx)
 
     rv = dup2(ctx->data_in_fd, STDIN_FILENO);
     if (rv < 0) {
-        sprintf(sg_data.err, "data_in_fd: %s\n", strerror(errno));
-        return;
+        return EFDINERR;
     }
 
     rv = dup2(ctx->user_out_fd, STDOUT_FILENO);
     if (rv < 0) {
-        sprintf(sg_data.err, "user_out_fd: %s\n", strerror(errno));
-        return;
+        return EFDOUTERR;
     }
 
+    /* stderr > /dev/null */
     freopen("/dev/null", "a", stderr);
 
     /*
@@ -490,16 +483,13 @@ sabo_child_run(const sabo_ctx_t *ctx)
     /* exec the user process */
     if (ctx->language == SABO_JAVA) {
         rv = execl(ctx->executor, ctx->code_bin_file, NULL);
-        if (rv < 0) {
-            sprintf(sg_data.err, "execl: %s(executor)\n", strerror(errno));
-        }
 
     } else {
-
         /*Execute the java program with the jvm security policy */
         rv = execl(ctx->executor, "java", "-cp", ctx->classpath, "-Xss8M", "-Djava.security.manager", "-Djava.security.policy==policy", "-Djava.awt.headless=TRUE", ctx->code_bin_file, NULL);
-        sprintf(sg_data.err, "execl for java: %s\n", strerror(errno));
     }
+
+    return rv;
 }
 
 
@@ -518,25 +508,18 @@ sabo_check(sabo_ctx_t *ctx)
 }
 
 
-const char *
+int
 sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 {
-    pid_t child;
-    int fd[2];
-    int rv, flags, n;
+    pid_t      child;
+    int        rv;
 
     if (ctx == NULL) {
-        return "args: ctx null";
+        return ECTXNULL;
     }
 
     if (info == NULL) {
-        return "args: info null";
-    }
-
-    rv = pipe(fd);
-    if (rv < 0) {
-        sprintf(sg_data.err, "create pipe failed %s\n", strerror(errno));
-        return sg_data.err;
+        return EINFONULL;
     }
 
     sabo_core_init();
@@ -544,40 +527,20 @@ sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
     sabo_check(ctx);
 
     if ((child = fork()) < 0) {
-        return strerror(errno);
+        return errno;
     }
 
+    /* child */
     if (child == 0) {
-        close(fd[0]);
-
         sabo_child_run(ctx);
-
-        write(fd[1], sg_data.err, strlen(sg_data.err));
+        /* child exit */
         exit(EXIT_FAILURE);
 
     } else {
-        close(fd[1]);
-        usleep(100);
-        
-        flags = fcntl(fd[0], F_GETFL);
-        fcntl(fd[0], F_SETFL, flags | O_NONBLOCK);
-
-        n = read(fd[0], sg_data.err, sizeof(sg_data.err));
-        if (n == -1 && errno == EAGAIN) {
-            sg_data.err[0] = '\0';
-            sabo_monitor_run(child, ctx, info);
-        }
+        rv = sabo_monitor_run(child, ctx, info);
     }
 
-    if (sg_data.err[0] != '\0') {
-        info->time_used = -1;
-        info->memory_used = -1;
-        info->judge_flag = SABO_SYSERR;
+    /* impossible reach here for child */
 
-        return sg_data.err;
-    }
-
-    close(fd[0]);
-
-    return NULL;
+    return rv;
 }

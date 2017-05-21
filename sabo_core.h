@@ -17,12 +17,21 @@
 #define   SABO_C_CPP     1
 #define   SABO_JAVA      0
 
+
+/* error code */
+#define ECTXNULL    -1
+#define EINFONULL   -2
+#define EFORKERR    -4
+#define EFDINERR    -5
+#define EFDOUTERR   -6
+#define ECHILDRTERR -7
+
+
 typedef struct {
 
     const char *code_bin_file;
     const char *executor;
     
-
     int data_in_fd;
     int user_out_fd;
 
@@ -43,5 +52,5 @@ typedef struct {
 } sabo_res_t;
 
 
-const char *sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info);
+int sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info);
 #endif
