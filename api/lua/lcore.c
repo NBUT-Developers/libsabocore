@@ -81,6 +81,7 @@ create_sabo_ctx(lua_State *L, sabo_ctx_t *ctx)
     path = lua_tostring(L, -1);
     ctx->user_out_fd = open(path, O_WRONLY);
     if (ctx->user_out_fd <= 0) {
+        close(ctx->data_in_fd);
         luaL_error(L, "bad user_out path: %s", strerror(errno));
     }
 
@@ -123,6 +124,9 @@ run(lua_State *L)
 
     lua_pushnumber(L, info.memory_used);
     lua_setfield(L, -2, "memory_used");
+
+    close(ctx->data_in_fd);
+    close(ctx->user_out_fd);
 
     lua_pushnumber(L, rc); /* rc table */
 
