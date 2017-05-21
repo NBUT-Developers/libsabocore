@@ -1,19 +1,25 @@
 
 /* Copyright Alex(zchao1995@gmail.com) */
 
-#include <luaconf.h>
 #include <lua.h>
+#include <string.h>
 #include <lauxlib.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "sabo_core.h"
 
 
 static void create_sabo_ctx(lua_State *L, sabo_ctx_t *ctx);
-static int sabo_core_run(lua_State *L);
+static int run(lua_State *L);
 
 
 static void
 create_sabo_ctx(lua_State *L, sabo_ctx_t *ctx)
 {
+    const char *path;
+
     lua_getfield(L, -1, "code_bin_file"); /* code_bin_file, table */
     ctx->code_bin_file = lua_tostring(L, -1);
     if (ctx->code_bin_file == NULL) {
@@ -62,32 +68,35 @@ create_sabo_ctx(lua_State *L, sabo_ctx_t *ctx)
 
     lua_pop(L, 1); /* table */
 
-    lua_getfield(L, -1, "data_in_fd"); /* data_in_fd, table */
-    ctx->data_in_fd = lua_tonumber(L, -1);
+    lua_getfield(L, -1, "data_in"); /* data_in, table */
+    path = lua_tostring(L, -1);
+    ctx->data_in_fd = open(path, O_RDONLY);
     if (ctx->data_in_fd <= 0) {
-        luaL_error(L, "bad data_in_fd");
+        luaL_error(L, "bad data_in path: %s", strerror(errno));
     }
 
     lua_pop(L, 1); /* table */
 
-    lua_getfield(L, -1, "user_out_fd"); /* user_out_fd, table */
-    ctx->user_out_fd = lua_tonumber(L, -1);
+    lua_getfield(L, -1, "user_out"); /* user_out_fd, table */
+    path = lua_tostring(L, -1);
+    ctx->user_out_fd = open(path, O_WRONLY);
     if (ctx->user_out_fd <= 0) {
-        luaL_error(L, "bad user_out_fd");
+        luaL_error(L, "bad user_out path: %s", strerror(errno));
     }
 
     lua_pop(L, 1); /* table */
 }
 
 
-/* Well, we need to fetch the args from the Lua stack,
+/* 
+ * Well, we need to fetch the args from the Lua stack,
  * So, pass a Lua table is a good idea.
  */
 static int
-sabo_core_run(lua_State *L)
+run(lua_State *L)
 {
     sabo_ctx_t ctx;
-    sabo_ret_t info;
+    sabo_res_t info;
     int        n, type, rc;
 
     n = lua_gettop(L);
@@ -104,7 +113,7 @@ sabo_core_run(lua_State *L)
 
     rc = sabo_core_run(&ctx, &info);
 
-    lua_creatable(L, 0, 3);
+    lua_createtable(L, 0, 3);
 
     lua_pushnumber(L, info.judge_flag);
     lua_setfield(L, -2, "judge_flag");
@@ -122,7 +131,7 @@ sabo_core_run(lua_State *L)
 
 
 static const struct luaL_Reg lcore_lib[] = {
-    { "sabo_core_run", sabo_core_run },
+    { "run", run },
     { NULL, NULL }
 };
 

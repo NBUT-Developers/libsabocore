@@ -78,7 +78,7 @@ sabo_sofile_t sabo_sofile_whitelist[] = {
 
 static void sabo_core_init();
 static void sabo_set_limit(const sabo_ctx_t *ctx);
-static void sabo_child_run(const sabo_ctx_t *ctx);
+static int sabo_child_run(const sabo_ctx_t *ctx);
 static int sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *resinfo);
 static void sabo_check(sabo_ctx_t *ctx);
 static void sabo_kill(pid_t child);
@@ -316,6 +316,7 @@ sabo_monitor_run(pid_t child, const sabo_ctx_t *ctx, sabo_res_t *res)
     struct user_regs_struct reg;
 
     time_used   = 0;
+    rv          = 0;
     judge_flag  = SABO_UNKNOWN;
     language    = ctx->language;
 
@@ -511,7 +512,7 @@ int
 sabo_core_run(sabo_ctx_t *ctx, sabo_res_t *info)
 {
     pid_t      child;
-    int        rv, flags, n;
+    int        rv;
 
     if (ctx == NULL) {
         return ECTXNULL;
